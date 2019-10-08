@@ -45,6 +45,15 @@ spoke_align_mm = 0;
 rim_internal_thicknes = 1;
 rim_internal_height = 6;
 
+// 0 - rim is aligned to one side of the wheel, 50 - in the middle, 100 - to another side
+// -1 - means that rim_align_mm is used
+// percent calculated from wheel width
+// will not match absolute value for spokes if they have different height!
+rim_internal_align_percent = 0; // [-1:1:100]
+
+// the same, but in mm. Could be negative
+rim_internal_align_mm = 0;
+
 rim_external_thicknes = 2;
 rim_external_height = 7;
 
@@ -62,6 +71,8 @@ rim_internal_inner_radius = hub_radius + spoke_length;
 rim_external_inner_radius = hub_radius + spoke_length + rim_internal_thicknes;
 
 spoke_align = (spoke_align_percent < 0) ? spoke_align_mm : (wheel_width - spoke_height) * spoke_align_percent / 100;
+    
+rim_internal_align = (rim_internal_align_percent < 0) ? rim_internal_align_mm : (wheel_width - rim_internal_height) * rim_internal_align_percent / 100;
     
 hub_height = (hub_height_mm == -1) ? wheel_width : hub_height_mm;
 
@@ -151,14 +162,27 @@ module spoke() {
 
 module rim() {
     union () {
-        color("purple") difference() {
-            rim_internal_itself();
-            rim_internal_hole();
+        color("purple")  rim_internal();
+        rim_external();
+    }
+}
+
+module rim_internal() {
+    let (align = -(wheel_width - rim_internal_height) / 2 + rim_internal_align) {
+        
+        translate([0, 0, align]) {
+            difference() {
+                rim_internal_itself();
+                rim_internal_hole();
+            }
         }
-        difference() {
-            rim_external_itself();
-            rim_external_hole();
-        }
+    }
+}
+
+module rim_external() {
+    difference() {
+        rim_external_itself();
+        rim_external_hole();
     }
 }
 
@@ -174,6 +198,7 @@ module rim_external_hole(height = rim_external_height + aBit) {
 
 module rim_internal_itself() {
     let (radius = rim_internal_inner_radius + rim_internal_thicknes) {
+            
         cylinder(h = rim_internal_height, r = radius, center = true);
     }
 }
