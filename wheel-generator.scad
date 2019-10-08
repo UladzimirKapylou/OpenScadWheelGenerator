@@ -14,6 +14,7 @@ wheel_width = 8;
 
 /* [Hub] */
 hub_radius = 4;
+
 // -1 - the same as 0.75 of wheel width
 hub_height_mm = -1;
 
@@ -36,7 +37,7 @@ hub_align_percent = 0; // [-1:1:100]
 // the same, but in mm. Could be negative
 hub_align_mm = 0;
 
-/* [Spokes] */
+/* [Spokes and Disc] */
 spoke_count = 3;
 spoke_width = 12;
 
@@ -46,11 +47,29 @@ spoke_height_mm = -1;
 // 0 - spokes are aligned to one side of the wheel, 50 - in the middle, 100 - to another side
 // -1 - means that spoke_align_mm is used
 // percent calculated from wheel width
-// will not match absolute value for hub if it hase different height!
+// will not match absolute value for hub if it has different height!
 spoke_align_percent = 0; // [-1:1:100]
 
 // the same, but in mm. Could be negative
 spoke_align_mm = 0;
+
+add_disc = true;
+
+// -1 - the same as hub diameter
+disc_inner_diameter_mm = -1;
+
+// -1 - the same as rim diameter
+disc_outer_diameter_mm = -1;
+
+disc_thickness = 1;
+
+// 0 - disk is aligned to one side of the wheel, 50 - in the middle, 100 - to another side
+// -1 - means that disc_align_mm is used
+// percent calculated from wheel width
+disc_align_percent = 0; // [-1:1:100]
+
+// the same, but in mm. Could be negative
+disc_align_mm = 0;
 
 /* [Rim] */
 rim_internal_thicknes = 1;
@@ -98,6 +117,14 @@ rim_internal_inner_radius = hub_radius + spoke_length;
 
 rim_external_inner_radius = hub_radius + spoke_length + rim_internal_thicknes;
 
+disc_inner_diameter = (disc_inner_diameter_mm == -1)
+            ? hub_radius * 2
+            : disc_inner_diameter_mm;
+
+disc_outer_diameter = (disc_outer_diameter_mm == -1)
+            ? rim_internal_inner_radius * 2
+            : disc_outer_diameter_mm;
+
 hub_align = (hub_align_percent < 0)
             ? hub_align_mm
             : (wheel_width - hub_height) * hub_align_percent / 100;
@@ -105,6 +132,10 @@ hub_align = (hub_align_percent < 0)
 spoke_align = (spoke_align_percent < 0)
             ? spoke_align_mm
             : (wheel_width - spoke_height) * spoke_align_percent / 100;
+
+disc_align = (disc_align_percent < 0)
+            ? disc_align_mm
+            : (wheel_width - disc_thickness) * disc_align_percent / 100;
 
 rim_internal_align = (rim_internal_align_percent < 0)
             ? rim_internal_align_mm
@@ -128,9 +159,10 @@ module wheel() {
         union() {
             hub();
             spokes();
+            if (add_disc) color("BurlyWood") disc();
             rim();
         }
-        hub_hole(); // one more time for thick spokes
+        hub_hole(); // one more time for thick spokes and disc
     }
 }
 
@@ -196,6 +228,25 @@ module spoke() {
             cube([length, spoke_width, spoke_height], center = true);
         }
     }
+}
+
+module disc() {
+    align = -(wheel_width - disc_thickness) / 2 + disc_align;
+    
+    translate([0, 0, align]) {
+        difference() {
+            disc_itself();
+            disc_hole();
+        }
+    }
+}
+
+module disc_itself() {
+    cylinder(h = disc_thickness, d = disc_outer_diameter, center = true);
+}
+
+module disc_hole() {
+    cylinder(h = disc_thickness + aBit, d = disc_inner_diameter, center = true);
 }
 
 module rim() {
