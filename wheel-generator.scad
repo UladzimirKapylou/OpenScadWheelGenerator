@@ -5,6 +5,7 @@ $fs = 0.1;
 render_part = "a"; // [a:Wheel, b:Tire, c:Wheel And Tire Joined]
 
 wheel_radius = 20;
+wheel_width = 7;
 
 // rim обод
 // hub ступица
@@ -13,7 +14,8 @@ wheel_radius = 20;
 
 /* [Hub] */
 hub_radius = 4;
-hub_height = 7;
+// -1 - the same as wheel width
+hub_height_mm = -1;
 
 hub_hole_diameter = 3;
 hub_hole_flat_diameter = 2.5;
@@ -23,9 +25,17 @@ hub_hole_flat_angle = 0;
 hub_hole_extension = 0.2;
 
 /* [Spokes] */
-spoke_count = 5;
+spoke_count = 6;
 spoke_width = 2;
-spoke_height = 7;
+spoke_height = 5;
+
+// 0 - spokes are aligned to one side of the wheel, 50 - in the middle, 100 - to another side
+// -1 - means that spoke_align_mm is used
+// percent calculated from wheel width
+spoke_align_percent = 0; // [-1:1:100]
+
+// the same, but in mm. Could be negative
+spoke_align_mm = 0;
 
 /* [Rim] */
 rim_thicknes = 2;
@@ -35,9 +45,17 @@ rim_height = 7;
 aBit = 0.1; 
 
 /* [Global] */
+
 /*[Hidden]*/
+// ----- Calc additional values -----
 spoke_length = wheel_radius - hub_radius - rim_thicknes;
+
 rim_inner_radius = hub_radius + spoke_length;
+
+spoke_align = (spoke_align_percent < 0) ? spoke_align_mm : (wheel_width - spoke_height) * spoke_align_percent / 100;
+    
+hub_height = (hub_height_mm == -1) ? wheel_width : hub_height_mm;
+
 
 // circle calculations https://www.mathopenref.com/sagitta.html
 
@@ -95,9 +113,10 @@ module spoke() {
     let (inner_length_correction = cube_to_cylinder(spoke_width, hub_radius),
         outer_length_correction = cube_to_cylinder(spoke_width, rim_inner_radius),
         length = spoke_length + inner_length_correction + outer_length_correction,
-        spoke_distance = length / 2 + hub_radius - inner_length_correction) {
+        spoke_distance = length / 2 + hub_radius - inner_length_correction,
+        align = -(wheel_width - spoke_height) / 2 + spoke_align) {
 
-        translate([spoke_distance, 0, 0]) {
+        translate([spoke_distance, 0, align]) {
             cube([length, spoke_width, spoke_height], center = true);
         }
     }
