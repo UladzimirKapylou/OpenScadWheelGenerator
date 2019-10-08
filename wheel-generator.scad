@@ -17,7 +17,10 @@ hub_height = 7;
 
 hub_hole_diameter = 3;
 hub_hole_flat_diameter = 2.5;
-hub_hole_extension = 0.2; // makes hole larger for this value (in mm)
+hub_hole_flat_angle = 0;
+
+// makes hole larger for this value (in mm)
+hub_hole_extension = 0.2;
 
 /* [Spokes] */
 spoke_count = 5;
@@ -27,7 +30,9 @@ spoke_height = 7;
 /* [Rim] */
 rim_thicknes = 2;
 rim_height = 7;
-aBit = 0.1; // utility small value to increment/decrement values when needed
+
+// utility small value to increment/decrement values when needed
+aBit = 0.1; 
 
 /* [Global] */
 /*[Hidden]*/
@@ -53,7 +58,7 @@ module wheel() {
 module hub() {
     difference() {
         color("green") hub_cylinder();
-        difference() {
+        rotate([0, 0, hub_hole_flat_angle]) difference() {
             hub_hole();
             hub_hole_flat();
         }
