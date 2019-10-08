@@ -4,7 +4,7 @@ $fs = 0.1;
 /* [Tab] */
 render_part = "a"; // [a:Wheel, b:Tire, c:Wheel And Tire Joined]
 
-wheel_radius = 20;
+wheel_diameter = 40;
 wheel_width = 8;
 
 // rim обод
@@ -13,7 +13,7 @@ wheel_width = 8;
 // spoke спица
 
 /* [Hub] */
-hub_radius = 4;
+hub_diameter = 8;
 
 // -1 - the same as 0.75 of wheel width
 hub_height_mm = -1;
@@ -111,6 +111,9 @@ rim_internal_height = (rim_internal_height_mm == -1) ? spoke_height * 2 : rim_in
 rim_external_height = (rim_external_height_mm == -1) ? wheel_width : rim_external_height_mm;
 
 // ----- Calc additional values -----
+hub_radius = hub_diameter / 2;
+wheel_radius = wheel_diameter / 2;
+
 spoke_length = wheel_radius - hub_radius - rim_internal_thicknes - rim_external_thicknes;
 
 rim_internal_inner_radius = hub_radius + spoke_length;
