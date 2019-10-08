@@ -29,14 +29,14 @@ hub_hole_cap_hight = 1;
 hub_hole_extension = 0.17;
 
 /* [Spokes] */
-spoke_count = 6;
-spoke_width = 2;
+spoke_count = 3;
+spoke_width = 12;
 spoke_height = 5;
 
 // 0 - spokes are aligned to one side of the wheel, 50 - in the middle, 100 - to another side
 // -1 - means that spoke_align_mm is used
 // percent calculated from wheel width
-spoke_align_percent = 0; // [-1:1:100]
+spoke_align_percent = 50; // [-1:1:100]
 
 // the same, but in mm. Could be negative
 spoke_align_mm = 0;
@@ -71,23 +71,20 @@ module whole_wheel() {
 
 // ----- Wheel Modules -----
 module wheel() {
-    union() {
-    hub();
-    spokes();
-    rim();}
+    difference() {
+        union() {
+            hub();
+            spokes();
+            rim();
+        }
+        hub_hole(); // one more time for thick spokes
+    }
 }
 
 module hub() {
     difference() {
         color("green") hub_cylinder();
-        hub_hole_cap_shift = aBit / 2 + hub_hole_cap_hight;
-        hub_hole_cap_align = !hub_hole_add_cap ? 0 :
-                                hub_hole_cap_position == "t" ? -hub_hole_cap_shift : hub_hole_cap_shift;
-        
-        translate ([0, 0, hub_hole_cap_align]) rotate([0, 0, hub_hole_flat_angle]) difference() {
-            hub_hole();
-            hub_hole_flat();
-        }
+        hub_hole();
     }
 }
 
@@ -95,7 +92,7 @@ module hub_hole_flat() {
     difference() {
         size = hub_hole_diameter * 2; // to be sure that cube is bigger enough
         
-        hub_hole(size);
+        hub_hole_cylinder(size);
         flat_shift = -size / 2 - hub_hole_diameter / 2 + hub_hole_flat_diameter + hub_hole_extension;
         
         translate([flat_shift, 0, 0]) cube([size, size, hub_height + 2 * aBit], center = true);
@@ -107,24 +104,41 @@ module hub_cylinder() {
     circle(r = hub_radius);
 }
 
-module hub_hole(diameter = hub_hole_diameter) {
+module hub_hole() {
+    hub_hole_cap_shift = aBit / 2 + hub_hole_cap_hight;
+    hub_hole_cap_align = !hub_hole_add_cap ? 0 :
+                            hub_hole_cap_position == "t" ? -hub_hole_cap_shift : hub_hole_cap_shift;
+    
+    translate ([0, 0, hub_hole_cap_align]) rotate([0, 0, hub_hole_flat_angle]) difference() {
+        hub_hole_cylinder();
+        hub_hole_flat();
+    }
+}
+
+module hub_hole_cylinder(diameter = hub_hole_diameter) {
     cylinder(d = diameter + hub_hole_extension, h = hub_height + aBit, center = true);   
 }
 
 module spokes() {
-    for(angle = [0: 360 / spoke_count : 360 - aBit]) {
-         color("pink") rotate([0, 0, angle]) spoke();
+    align = -(wheel_width - spoke_height) / 2 + spoke_align;
+    
+    translate([0, 0, align]) {
+        intersection() {
+            for(angle = [0: 360 / spoke_count : 360 - aBit]) {
+                 color("pink") rotate([0, 0, angle]) spoke();
+            }
+            rim_hole(spoke_height + aBit);
+        }
     }
 }
 
 module spoke() {
-    let (inner_length_correction = cube_to_cylinder(spoke_width, hub_radius),
-        outer_length_correction = cube_to_cylinder(spoke_width, rim_inner_radius),
+    let (inner_length_correction = hub_radius,
+        outer_length_correction = rim_inner_radius,
         length = spoke_length + inner_length_correction + outer_length_correction,
-        spoke_distance = length / 2 + hub_radius - inner_length_correction,
-        align = -(wheel_width - spoke_height) / 2 + spoke_align) {
+        spoke_distance = length / 2 + hub_radius - inner_length_correction) {
 
-        translate([spoke_distance, 0, align]) {
+        translate([spoke_distance, 0, 0]) {
             cube([length, spoke_width, spoke_height], center = true);
         }
     }
@@ -133,7 +147,7 @@ module spoke() {
 module rim() {
     difference() {
         rim_itself();
-        rim_inner_cylinder();
+        rim_hole();
     }
 }
 
@@ -143,8 +157,8 @@ module rim_itself() {
     }
 }
 
-module rim_inner_cylinder() {
-    cylinder(h = rim_height + 1, r = rim_inner_radius, center = true);
+module rim_hole(height = rim_height + aBit) {
+    cylinder(h = height, r = rim_inner_radius, center = true);
 }
 
 // ----- Tire Modules -----
