@@ -19,10 +19,10 @@ hub_height_mm = -1;
 
 hub_hole_diameter = 3;
 hub_hole_flat_diameter = 2.5;
-hub_hole_flat_angle = 0;
+hub_hole_flat_angle = 0.2;
 
 // makes hole larger for this value (in mm)
-hub_hole_extension = 0.2;
+hub_hole_extension = 0.;
 
 /* [Spokes] */
 spoke_count = 6;
@@ -85,10 +85,10 @@ module hub() {
 
 module hub_hole_flat() {
     difference() {
-        size = hub_hole_diameter * 2; // to be sure
+        size = hub_hole_diameter * 2; // to be sure that cube is bigger enough
         
         hub_hole(size);
-        flat_shift = size / 2 - hub_hole_diameter + hub_hole_flat_diameter - hub_hole_extension;
+        flat_shift = -size / 2 - hub_hole_diameter / 2 + hub_hole_flat_diameter - hub_hole_extension;
         
         translate([flat_shift, 0, 0]) cube([size, size, hub_height + 2 * aBit], center = true);
     }
