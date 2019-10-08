@@ -36,25 +36,30 @@ spoke_height = 5;
 // 0 - spokes are aligned to one side of the wheel, 50 - in the middle, 100 - to another side
 // -1 - means that spoke_align_mm is used
 // percent calculated from wheel width
-spoke_align_percent = 50; // [-1:1:100]
+spoke_align_percent = 0; // [-1:1:100]
 
 // the same, but in mm. Could be negative
 spoke_align_mm = 0;
 
 /* [Rim] */
-rim_thicknes = 2;
-rim_height = 7;
+rim_internal_thicknes = 1;
+rim_internal_height = 6;
 
-// utility small value to increment/decrement values when needed
+rim_external_thicknes = 2;
+rim_external_height = 7;
+
+// a small value to increment/decrement values when needed
 aBit = 0.1; 
 
 /* [Global] */
 
 /*[Hidden]*/
 // ----- Calc additional values -----
-spoke_length = wheel_radius - hub_radius - rim_thicknes;
+spoke_length = wheel_radius - hub_radius - rim_internal_thicknes - rim_external_thicknes;
 
-rim_inner_radius = hub_radius + spoke_length;
+rim_internal_inner_radius = hub_radius + spoke_length;
+
+rim_external_inner_radius = hub_radius + spoke_length + rim_internal_thicknes;
 
 spoke_align = (spoke_align_percent < 0) ? spoke_align_mm : (wheel_width - spoke_height) * spoke_align_percent / 100;
     
@@ -127,14 +132,14 @@ module spokes() {
             for(angle = [0: 360 / spoke_count : 360 - aBit]) {
                  color("pink") rotate([0, 0, angle]) spoke();
             }
-            rim_hole(spoke_height + aBit);
+            rim_internal_hole(spoke_height + aBit);
         }
     }
 }
 
 module spoke() {
     let (inner_length_correction = hub_radius,
-        outer_length_correction = rim_inner_radius,
+        outer_length_correction = rim_internal_inner_radius,
         length = spoke_length + inner_length_correction + outer_length_correction,
         spoke_distance = length / 2 + hub_radius - inner_length_correction) {
 
@@ -145,20 +150,36 @@ module spoke() {
 }
 
 module rim() {
-    difference() {
-        rim_itself();
-        rim_hole();
+    union () {
+        color("purple") difference() {
+            rim_internal_itself();
+            rim_internal_hole();
+        }
+        difference() {
+            rim_external_itself();
+            rim_external_hole();
+        }
     }
 }
 
-module rim_itself() {
-    let (radius = rim_inner_radius + rim_thicknes) {
-        cylinder(h = rim_height, r = radius, center = true);
+module rim_external_itself() {
+    let (radius = rim_external_inner_radius + rim_external_thicknes) {
+        cylinder(h = rim_external_height, r = radius, center = true);
     }
 }
 
-module rim_hole(height = rim_height + aBit) {
-    cylinder(h = height, r = rim_inner_radius, center = true);
+module rim_external_hole(height = rim_external_height + aBit) {
+    cylinder(h = height, r = rim_external_inner_radius, center = true);
+}
+
+module rim_internal_itself() {
+    let (radius = rim_internal_inner_radius + rim_internal_thicknes) {
+        cylinder(h = rim_internal_height, r = radius, center = true);
+    }
+}
+
+module rim_internal_hole(height = rim_internal_height + aBit) {
+    cylinder(h = height, r = rim_internal_inner_radius, center = true);
 }
 
 // ----- Tire Modules -----
