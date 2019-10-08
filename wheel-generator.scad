@@ -21,8 +21,12 @@ hub_hole_diameter = 3;
 hub_hole_flat_diameter = 2.5;
 hub_hole_flat_angle = 0.2;
 
+hub_hole_add_cap = false;
+hub_hole_cap_position = "t"; // [t:Top, b:Bottom]
+hub_hole_cap_hight = 1; 
+
 // makes hole larger for this value (in mm)
-hub_hole_extension = 0.;
+hub_hole_extension = 0.17;
 
 /* [Spokes] */
 spoke_count = 6;
@@ -76,7 +80,11 @@ module wheel() {
 module hub() {
     difference() {
         color("green") hub_cylinder();
-        rotate([0, 0, hub_hole_flat_angle]) difference() {
+        hub_hole_cap_shift = aBit / 2 + hub_hole_cap_hight;
+        hub_hole_cap_align = !hub_hole_add_cap ? 0 :
+                                hub_hole_cap_position == "t" ? -hub_hole_cap_shift : hub_hole_cap_shift;
+        
+        translate ([0, 0, hub_hole_cap_align]) rotate([0, 0, hub_hole_flat_angle]) difference() {
             hub_hole();
             hub_hole_flat();
         }
@@ -88,7 +96,7 @@ module hub_hole_flat() {
         size = hub_hole_diameter * 2; // to be sure that cube is bigger enough
         
         hub_hole(size);
-        flat_shift = -size / 2 - hub_hole_diameter / 2 + hub_hole_flat_diameter - hub_hole_extension;
+        flat_shift = -size / 2 - hub_hole_diameter / 2 + hub_hole_flat_diameter + hub_hole_extension;
         
         translate([flat_shift, 0, 0]) cube([size, size, hub_height + 2 * aBit], center = true);
     }
