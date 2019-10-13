@@ -201,14 +201,14 @@ slice_wheel_align = (slice_wheel_percent < 0)
             ? slice_wheel_mm
             : wheel_diameter * (100 - slice_wheel_percent) / 100;
 
-rotate_angle = debug_tire_profile ? 180 : 360;
+rotate_angle = $preview && debug_tire_profile ? 180 : 360;
 
 // circle calculations https://www.mathopenref.com/sagitta.html
 
 module wheel_generator() {
     difference() {
         wheel();
-        if (slice_wheel || debug_tire_profile) slice();
+        if ($preview && (slice_wheel || debug_tire_profile)) slice();
     }
 }
 
