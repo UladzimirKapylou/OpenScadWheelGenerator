@@ -8,6 +8,19 @@ render_part = "a"; // [w:Wheel, t:Tire, a:Wheel And Tire Joined]
 wheel_diameter = 40;
 wheel_width = 8;
 
+// just for general understanding and debugging of wheel/tire profiles in fast render view
+debug_tire_profile = false;
+
+// slice the whole wheel vertically
+slice_wheel = false;
+
+// 0 - wheel is not sliced, 50 - is sliced in the middle, 100 - the whole wheel is sliced out
+// -1 - means that slice_wheel_mm is used
+// percent calculated from the wheel diameter
+slice_wheel_percent = 50;
+// the same, but in mm
+slice_wheel_mm = 0;
+
 // rim обод
 // hub ступица
 // shaft ось
@@ -32,7 +45,7 @@ hub_hole_extension = 0.17;
 
 // 0 - hub is aligned to one side of the wheel, 50 - in the middle, 100 - to another side
 // -1 - means that hub_align_mm is used
-// percent calculated from wheel width
+// position of the hub along the z axis in percent calculated from wheel width
 hub_align_percent = 0; // [-1:1:100]
 
 // the same, but in mm. Could be negative
@@ -136,10 +149,9 @@ tire_bevel_width = [1, 1];
 tire_bevel_angle = [45, 45];
 
 /* [Global] */
-
 /*[Hidden]*/
-// a small value to increment/decrement values when needed
-aBit = 0.1; 
+// a small value to increment/decrement values when needed to improve fast render view
+aBit = 0.001; 
 
 // ----- Calc additional values -----
 hub_height = (hub_height_mm == -1) ? wheel_width * 0.75 : hub_height_mm;
@@ -185,7 +197,25 @@ rim_external_align = (rim_external_align_percent < 0)
             ? rim_external_align_mm
             : (wheel_width - rim_external_height) * rim_external_align_percent / 100;
 
+slice_wheel_align = (slice_wheel_percent < 0)
+            ? slice_wheel_mm
+            : wheel_diameter * (100 - slice_wheel_percent) / 100;
+
+rotate_angle = debug_tire_profile ? 180 : 360;
+
 // circle calculations https://www.mathopenref.com/sagitta.html
+
+module wheel_generator() {
+    difference() {
+        wheel();
+        if (slice_wheel || debug_tire_profile) slice();
+    }
+}
+
+module slice() {
+    translate([0, -slice_wheel_align - aBit, 0])
+        cube([wheel_diameter + aBit, wheel_diameter, wheel_width + aBit], center = true);
+}
 
 // ----- Wheel Modules -----
 module wheel() {
@@ -202,7 +232,7 @@ module wheel() {
 
 // ----- Tire Modules -----
 module tire() {
-    rotate_extrude(convexity = 6)
+    rotate_extrude(angle = rotate_angle, convexity = 6)
         tire_profile();
 }
 
@@ -365,7 +395,7 @@ module rim_profile() {
 }
 
 module rim_external() {
-    rotate_extrude(convexity = 6) {
+    rotate_extrude(angle = rotate_angle, convexity = 6) {
         rim_external_profile();
     }
 }
@@ -391,7 +421,7 @@ module bare_rim_external_profile() {
 }
 
 module rim_internal() {
-    rotate_extrude(convexity = 6) {
+    rotate_extrude(angle = rotate_angle, convexity = 6) {
         rim_internal_profile();
     }
 }
@@ -427,9 +457,8 @@ module trapezia(base_width = 5, top_width = 3, height = 3) {
 module triangle(base_width = 5, height = 3) {
     trapezia(base_width = base_width, top_width = 0, height = height);
 }
-*rotate_extrude(angle=90) trapezia(base_width = 5, height = 7);
 
 // calculates sagitta (how deep cube has overlap cylinder to have no gap between them)
 function cube_to_cylinder(w, r) = r - sqrt(r * r - pow(w / 2, 2));
 
-wheel();
+wheel_generator();
