@@ -2,7 +2,7 @@ $fs = 0.1;
 $fn = 100;
 
 /* [Tab] */
-render_part = "a"; // [a:Wheel, b:Tire, c:Wheel And Tire Joined]
+render_part = "c"; // [a:Wheel, b:Tire, c:Wheel And Tire Joined]
 
 // diameter of the whole wheel with tire
 wheel_diameter = 40;
@@ -189,6 +189,7 @@ module wheel() {
     }
 }
 
+// ----- Tire Modules -----
 module tire() {
     rotate_extrude(convexity = 6)
         tire_profile();
@@ -207,7 +208,7 @@ module bare_tire_profile() {
         square([tire_thicknes + max_slot_depth, wheel_width]);
 }
 
-module tire_slots() {
+module tire_slots_profile() {
     for (i = [0: tire_slots_count - 1]) {
         tire_slot_depth = tire_slots_depth[i];
         tire_slot_width_external = tire_slots_width_external[i];
@@ -219,15 +220,11 @@ module tire_slots() {
                 ? tire_slot_align_mm
                 : (rim_external_height - tire_slot_width_external) * tire_slot_align_percent / 100;
             
-            color("yellow") tire_slot(depth = tire_slot_depth,
+            tire_slot_profile(depth = tire_slot_depth,
                      width_external = tire_slot_width_external,
                      angles = tire_slot_angles,
                      align = tire_slot_align);
     }
-}
-
-module tire_slot(depth, width_external, angles, align) {
-    tire_slot_profile(depth = depth, width_external = width_external, angles = angles, align = align);
 }
 
 module tire_slot_profile(depth, width_external, angles, align) {
@@ -240,6 +237,7 @@ module tire_slot_profile(depth, width_external, angles, align) {
     }
 }
 
+// ----- Hub modules -----
 module hub() {
     difference() {
         color("green") hub_cylinder(height = hub_height, align = calc_hub_align());
@@ -279,6 +277,7 @@ module hub_hole_cylinder(diameter = hub_hole_diameter) {
     cylinder(d = diameter + hub_hole_extension, h = hub_height + aBit, center = true);   
 }
 
+// ----- Spoke Modules -----
 module spokes() {
     align = -(wheel_width - spoke_height) / 2 + spoke_align;
     
@@ -307,6 +306,7 @@ module spoke() {
     }
 }
 
+// ----- Disc Modules -----
 module disc() {
     align = -(wheel_width - disc_thickness) / 2 + disc_align;
     
@@ -326,46 +326,58 @@ module disc_hole() {
     cylinder(h = disc_thickness + aBit, d = disc_inner_diameter, center = true);
 }
 
+// ----- Rim Modules -----
 module rim() {
-    rotate_extrude(convexity = 6) {
-        rim_profile();
-    }
+    color("purple") rim_internal();
+    rim_external();
 }
 
 module rim_profile() {
-    difference() {
-        union () {
-            color("purple")  rim_internal();
-            rim_external();
-        }
-        if (add_tire_slots) tire_slots();
-    }
-}
-
-module rim_internal() {
-    let (align = -(wheel_width - rim_internal_height) / 2 + rim_internal_align) {
-        
-        translate([0, align, 0]) {
-            rim_internal_itself();
-        }
-    }
+    rim_internal_profile();
+    rim_external_profile();
 }
 
 module rim_external() {
+    rotate_extrude(convexity = 6) {
+        rim_external_profile();
+    }
+}
+
+module rim_external_profile() {
+    difference() {
+        rim_external_profile_itself();
+        if (add_tire_slots) tire_slots_profile();
+    }
+}
+
+module rim_external_profile_itself() {
     let (align = -(wheel_width - rim_external_height) / 2 + rim_external_align) {
-        
         translate([0, align, 0]) {
-            rim_external_itself();
+            bare_rim_external_profile();
         }
     }
 }
 
-module rim_external_itself() {
+module bare_rim_external_profile() {
     translate([rim_external_inner_radius, - rim_external_height / 2, 0])
         square([rim_external_thicknes, rim_external_height]);
 }
 
-module rim_internal_itself() {
+module rim_internal() {
+    rotate_extrude(convexity = 6) {
+        rim_internal_profile();
+    }
+}
+
+module rim_internal_profile() {
+    let (align = -(wheel_width - rim_internal_height) / 2 + rim_internal_align) {
+        translate([0, align, 0]) {
+            bare_rim_internal_profile();
+        }
+    }
+}
+
+module bare_rim_internal_profile() {
     translate([rim_internal_inner_radius, - rim_internal_height / 2, 0])
         square([rim_internal_thicknes, rim_internal_height]);
 }
