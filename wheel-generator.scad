@@ -1,5 +1,5 @@
 $fs = 0.1;
-// $fn = 300;
+$fn = 100;
 
 /* [Tab] */
 render_part = "a"; // [a:Wheel, b:Tire, c:Wheel And Tire Joined]
@@ -53,7 +53,7 @@ spoke_align_percent = 0; // [-1:1:100]
 // the same, but in mm. Could be negative
 spoke_align_mm = 0;
 
-add_disc = true;
+add_disc = false;
 
 // -1 - the same as hub diameter
 disc_inner_diameter_mm = -1;
@@ -75,7 +75,7 @@ disc_align_mm = 0;
 rim_internal_thicknes = 1;
 
 // -1 - the same as spoke height * 2
-rim_internal_height_mm = -1;
+rim_internal_height_mm = wheel_width * 0.8;
 
 // 0 - rim is aligned to one side of the wheel, 50 - in the middle, 100 - to another side
 // -1 - means that rim_align_mm is used
@@ -99,18 +99,40 @@ rim_external_align_percent = 50; // [-1:1:100]
 // the same, but in mm. Could be negative
 rim_external_align_mm = 0;
 
+/* [Tire Slots] */
+add_tire_slots = true;
+
+// all next arrays should be size of tire_slots_count
+tire_slots_count = 2;
+
+tire_slots_depth = [1, 1];
+
+tire_slots_width_external = [1, 1];
+
+// angles of tire slot walls from bottom (by z axis) to top one
+tire_slots_angles = [[0, 0], [0, 0]];
+
+// 0 - tire slot is aligned to one side of the wheel, 50 - in the middle, 100 - to another side
+// -1 - means that tire_slot_align_mm is used
+// percent calculated from rim external width
+// array, one value for each tire_slot
+tire_slots_align_percent = [0, 100]; // [-1:1:100]
+
+// the same, but in mm. Could be negative
+tire_slots_align_mm = [0, 0];
+
 /* [Global] */
 
 /*[Hidden]*/
 // a small value to increment/decrement values when needed
 aBit = 0.1; 
 
+// ----- Calc additional values -----
 hub_height = (hub_height_mm == -1) ? wheel_width * 0.75 : hub_height_mm;
 spoke_height = (spoke_height_mm == -1) ? wheel_width / 3 : spoke_height_mm;
 rim_internal_height = (rim_internal_height_mm == -1) ? spoke_height * 2 : rim_internal_height_mm;
 rim_external_height = (rim_external_height_mm == -1) ? wheel_width : rim_external_height_mm;
 
-// ----- Calc additional values -----
 hub_radius = hub_diameter / 2;
 wheel_radius = wheel_diameter / 2;
 
@@ -119,6 +141,7 @@ spoke_length = wheel_radius - hub_radius - rim_internal_thicknes - rim_external_
 rim_internal_inner_radius = hub_radius + spoke_length;
 
 rim_external_inner_radius = hub_radius + spoke_length + rim_internal_thicknes;
+rim_external_radius = rim_external_inner_radius + rim_external_thicknes;
 
 disc_inner_diameter = (disc_inner_diameter_mm == -1)
             ? hub_radius * 2
@@ -166,6 +189,40 @@ module wheel() {
             rim();
         }
         hub_hole(); // one more time for thick spokes and disc
+        if (add_tire_slots) tire_slots();
+    }
+}
+
+module tire_slots() {
+    for (i = [0: tire_slots_count - 1]) {
+        tire_slot_depth = tire_slots_depth[i];
+        tire_slot_width_external = tire_slots_width_external[i];
+        tire_slot_angles = tire_slots_angles[i];
+        tire_slot_align_percent = tire_slots_align_percent[i];
+        tire_slot_align_mm = tire_slots_align_mm[i];
+            
+            tire_slot_align = (tire_slot_align_percent < 0)
+                ? tire_slot_align_mm
+                : (rim_external_height - tire_slot_width_external) * tire_slot_align_percent / 100;
+            
+            color("yellow") tire_slot(depth = tire_slot_depth,
+                     width_external = tire_slot_width_external,
+                     angles = tire_slot_angles,
+                     align = tire_slot_align);
+    }
+}
+
+module tire_slot(depth, width_external, angles, align) {
+    rotate_extrude() tire_slot_profile(depth = depth, width_external = width_external, angles = angles, align = align);
+}
+
+module tire_slot_profile(depth, width_external, angles, align) {
+    translate([rim_external_radius - depth, align - rim_external_height / 2, 0]) {
+        difference() {
+            square([depth, width_external]);
+            translate([depth, 0, 0]) rotate([0, 0, 180 - angles[0]]) square(depth + width_external);
+            translate([depth, width_external, 0]) rotate([0, 0, 90 + angles[1]]) square(depth + width_external);
+        }
     }
 }
 
@@ -284,9 +341,7 @@ module rim_external() {
 }
 
 module rim_external_itself() {
-    let (radius = rim_external_inner_radius + rim_external_thicknes) {
-        cylinder(h = rim_external_height, r = radius, center = true);
-    }
+    cylinder(h = rim_external_height, r = rim_external_radius, center = true);
 }
 
 module rim_external_hole(height = rim_external_height + aBit) {
