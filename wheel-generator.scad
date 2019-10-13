@@ -4,8 +4,11 @@ $fn = 100;
 /* [Tab] */
 render_part = "a"; // [a:Wheel, b:Tire, c:Wheel And Tire Joined]
 
+// diameter of the whole wheel with tire
 wheel_diameter = 40;
 wheel_width = 8;
+
+tire_thicknes = 3;
 
 // rim обод
 // hub ступица
@@ -136,7 +139,7 @@ rim_external_height = (rim_external_height_mm == -1) ? wheel_width : rim_externa
 hub_radius = hub_diameter / 2;
 wheel_radius = wheel_diameter / 2;
 
-spoke_length = wheel_radius - hub_radius - rim_internal_thicknes - rim_external_thicknes;
+spoke_length = wheel_radius - hub_radius - rim_internal_thicknes - rim_external_thicknes - tire_thicknes;
 
 rim_internal_inner_radius = hub_radius + spoke_length;
 
@@ -173,28 +176,35 @@ rim_external_align = (rim_external_align_percent < 0)
 
 // circle calculations https://www.mathopenref.com/sagitta.html
 
-module whole_wheel() {
-    if (render_part == "a") wheel();
-    else if (render_part == "b") tire();
-    else if (render_part == "c") union() {wheel(); tire();}
-}
-
 // ----- Wheel Modules -----
 module wheel() {
-    difference() {
-        union() {
-            hub();
-            spokes();
-            rotate_extrude(convexity = 6) {
-                if (add_disc) color("BurlyWood") disc();
-                difference() {
-                    rim();
-                    if (add_tire_slots) tire_slots();
-                }
-            }
-        }
-        hub_hole(); // one more time for thick spokes and disc
+    if (render_part == "a" || render_part == "c") {
+        hub();
+        spokes();
+        if (add_disc) color("BurlyWood") disc();
+        rim();
     }
+    if (render_part == "b" || render_part == "c") {
+        color("DarkGrey") tire();
+    }
+}
+
+module tire() {
+    rotate_extrude(convexity = 6)
+        tire_profile();
+}
+
+module tire_profile() {
+    difference() {
+        bare_tire_profile();
+        rim_profile();
+    }
+}    
+
+module bare_tire_profile() {
+    max_slot_depth = max(tire_slots_depth);
+    translate([rim_external_radius - max_slot_depth, -wheel_width / 2])
+        square([tire_thicknes + max_slot_depth, wheel_width]);
 }
 
 module tire_slots() {
@@ -232,7 +242,7 @@ module tire_slot_profile(depth, width_external, angles, align) {
 
 module hub() {
     difference() {
-        color("green") hub_cylinder();
+        color("green") hub_cylinder(height = hub_height, align = calc_hub_align());
         hub_hole();
     }
 }
@@ -248,9 +258,9 @@ module hub_hole_flat() {
     }
 }
 
-module hub_cylinder() {
-    translate([0, 0, calc_hub_align()])
-        cylinder(r = hub_radius, h = hub_height, center = true);
+module hub_cylinder(height, align) {
+    translate([0, 0, align])
+        cylinder(r = hub_radius, h = height, center = true);
 }
 
 module hub_hole() {
@@ -272,13 +282,16 @@ module hub_hole_cylinder(diameter = hub_hole_diameter) {
 module spokes() {
     align = -(wheel_width - spoke_height) / 2 + spoke_align;
     
-    translate([0, 0, align]) {
-        intersection() {
-            for(angle = [0: 360 / spoke_count : 360 - aBit]) {
-                 color("pink") rotate([0, 0, angle]) spoke();
+    difference() {
+        translate([0, 0, align]) {
+            intersection() {
+                for(angle = [0: 360 / spoke_count : 360 - aBit]) {
+                     color("pink") rotate([0, 0, angle]) spoke();
+                }
+                rim_internal_hole(spoke_height + aBit);
             }
-            rim_internal_hole(spoke_height + aBit);
         }
+        hub_cylinder(height = spoke_height * 10, align = 0);
     }
 }
 
@@ -314,9 +327,18 @@ module disc_hole() {
 }
 
 module rim() {
-    union () {
-        color("purple")  rim_internal();
-        rim_external();
+    rotate_extrude(convexity = 6) {
+        rim_profile();
+    }
+}
+
+module rim_profile() {
+    difference() {
+        union () {
+            color("purple")  rim_internal();
+            rim_external();
+        }
+        if (add_tire_slots) tire_slots();
     }
 }
 
@@ -352,24 +374,6 @@ module rim_internal_hole(height = rim_internal_height + aBit) {
     cylinder(h = height, r = rim_internal_inner_radius, center = true);
 }
 
-// ----- Tire Modules -----
-module tire() {
-    differense() {
-        rubber_part();
-        rim_part();
-    }
-    rotate_extrude() trapezia();
-}
-
-module rubber_part() {
-    
-}
-
-module rim_part() {
-    
-}
-
-
 // ----- Math Modules -----
 module trapezia(base_width = 5, top_width = 3, height = 3) {
     points = [
@@ -389,4 +393,4 @@ module triangle(base_width = 5, height = 3) {
 // calculates sagitta (how deep cube has overlap cylinder to have no gap between them)
 function cube_to_cylinder(w, r) = r - sqrt(r * r - pow(w / 2, 2));
 
-whole_wheel();
+wheel();
