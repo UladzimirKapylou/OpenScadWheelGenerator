@@ -1,14 +1,12 @@
 $fs = 0.1;
 $fn = 100;
 
-/* [Tab] */
+/* [General] */
 render_part = "c"; // [a:Wheel, b:Tire, c:Wheel And Tire Joined]
 
 // diameter of the whole wheel with tire
 wheel_diameter = 40;
 wheel_width = 8;
-
-tire_thicknes = 3;
 
 // rim обод
 // hub ступица
@@ -124,6 +122,12 @@ tire_slots_align_percent = [0, 100]; // [-1:1:100]
 // the same, but in mm. Could be negative
 tire_slots_align_mm = [0, 0];
 
+/* [Tire] */
+tire_thicknes = 3;
+
+// tire inner diameter will be decreased by this amount of mm to titgh it on the wheel
+tire_stretching = 0.2; 
+
 /* [Global] */
 
 /*[Hidden]*/
@@ -192,20 +196,20 @@ module wheel() {
 // ----- Tire Modules -----
 module tire() {
     rotate_extrude(convexity = 6)
-        tire_profile();
+        !tire_profile();
 }
 
 module tire_profile() {
     difference() {
-        bare_tire_profile();
-        rim_profile();
+        tire_profile_itself();
+        translate([-tire_stretching / 2, 0, 0]) rim_profile();
     }
 }    
 
-module bare_tire_profile() {
+module tire_profile_itself() {
     max_slot_depth = max(tire_slots_depth);
-    translate([rim_external_radius - max_slot_depth, -wheel_width / 2])
-        square([tire_thicknes + max_slot_depth, wheel_width]);
+    translate([rim_external_radius - max_slot_depth - tire_stretching / 2, -wheel_width / 2])
+        square([tire_thicknes + max_slot_depth + tire_stretching / 2, wheel_width]);
 }
 
 module tire_slots_profile() {
