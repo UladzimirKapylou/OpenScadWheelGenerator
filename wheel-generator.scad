@@ -94,7 +94,7 @@ rim_external_height_mm = -1;
 // 0 - rim is aligned to one side of the wheel, 50 - in the middle, 100 - to another side
 // -1 - means that rim_align_mm is used
 // percent calculated from wheel width
-rim_external_align_percent = 50; // [-1:1:100]
+rim_external_align_percent = 0; // [-1:1:100]
 
 // the same, but in mm. Could be negative
 rim_external_align_mm = 0;
@@ -185,11 +185,15 @@ module wheel() {
         union() {
             hub();
             spokes();
-            if (add_disc) color("BurlyWood") disc();
-            rim();
+            rotate_extrude(convexity = 6) {
+                if (add_disc) color("BurlyWood") disc();
+                difference() {
+                    rim();
+                    if (add_tire_slots) tire_slots();
+                }
+            }
         }
         hub_hole(); // one more time for thick spokes and disc
-        if (add_tire_slots) tire_slots();
     }
 }
 
@@ -213,7 +217,7 @@ module tire_slots() {
 }
 
 module tire_slot(depth, width_external, angles, align) {
-    rotate_extrude() tire_slot_profile(depth = depth, width_external = width_external, angles = angles, align = align);
+    tire_slot_profile(depth = depth, width_external = width_external, angles = angles, align = align);
 }
 
 module tire_slot_profile(depth, width_external, angles, align) {
@@ -319,11 +323,8 @@ module rim() {
 module rim_internal() {
     let (align = -(wheel_width - rim_internal_height) / 2 + rim_internal_align) {
         
-        translate([0, 0, align]) {
-            difference() {
-                rim_internal_itself();
-                rim_internal_hole();
-            }
+        translate([0, align, 0]) {
+            rim_internal_itself();
         }
     }
 }
@@ -331,27 +332,20 @@ module rim_internal() {
 module rim_external() {
     let (align = -(wheel_width - rim_external_height) / 2 + rim_external_align) {
         
-        translate([0, 0, align]) {
-            difference() {
-                rim_external_itself();
-                rim_external_hole();
-            }
+        translate([0, align, 0]) {
+            rim_external_itself();
         }
     }
 }
 
 module rim_external_itself() {
-    cylinder(h = rim_external_height, r = rim_external_radius, center = true);
-}
-
-module rim_external_hole(height = rim_external_height + aBit) {
-    cylinder(h = height, r = rim_external_inner_radius, center = true);
+    translate([rim_external_inner_radius, - rim_external_height / 2, 0])
+        square([rim_external_thicknes, rim_external_height]);
 }
 
 module rim_internal_itself() {
-    let (radius = rim_internal_inner_radius + rim_internal_thicknes) {
-        cylinder(h = rim_internal_height, r = radius, center = true);
-    }
+    translate([rim_internal_inner_radius, - rim_internal_height / 2, 0])
+        square([rim_internal_thicknes, rim_internal_height]);
 }
 
 module rim_internal_hole(height = rim_internal_height + aBit) {
