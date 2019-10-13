@@ -220,7 +220,7 @@ module slice() {
 // ----- Wheel Modules -----
 module wheel() {
     if (render_part == "w" || render_part == "a") {
-        hub();
+        color("green") hub();
         spokes();
         if (add_disc) color("BurlyWood") disc();
         rim();
@@ -297,7 +297,7 @@ module tire_slot_profile(depth, width_external, angles, align) {
 // ----- Hub modules -----
 module hub() {
     difference() {
-        color("green") hub_cylinder(height = hub_height, align = calc_hub_align());
+        hub_cylinder(height = hub_height, align = calc_hub_align(), angle = rotate_angle);
         hub_hole();
     }
 }
@@ -313,9 +313,10 @@ module hub_hole_flat() {
     }
 }
 
-module hub_cylinder(height, align) {
+module hub_cylinder(height, align, angle) {
     translate([0, 0, align])
-        cylinder(r = hub_radius, h = height, center = true);
+        rotate_extrude(angle = angle, convexity = 6)
+            translate([0, -height / 2, 0]) square([hub_radius, height]);
 }
 
 module hub_hole() {
@@ -347,7 +348,7 @@ module spokes() {
                 rim_internal_hole(spoke_height + aBit);
             }
         }
-        hub_cylinder(height = spoke_height * 10, align = 0);
+        hub_cylinder(height = (wheel_width + spoke_height) * 3, align = 0, angle = 360);
     }
 }
 
