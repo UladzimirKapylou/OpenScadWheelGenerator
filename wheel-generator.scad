@@ -2,7 +2,7 @@ $fs = 0.1;
 $fn = 100;
 
 /* [General] */
-render_part = "c"; // [a:Wheel, b:Tire, c:Wheel And Tire Joined]
+render_part = "a"; // [w:Wheel, t:Tire, a:Wheel And Tire Joined]
 
 // diameter of the whole wheel with tire
 wheel_diameter = 40;
@@ -108,10 +108,10 @@ tire_slots_count = 2;
 
 tire_slots_depth = [1, 1];
 
-tire_slots_width_external = [1, 1];
+tire_slots_width_external = [1.5, 1.5];
 
 // angles of tire slot walls from bottom (by z axis) to top one
-tire_slots_angles = [[0, 0], [0, 0]];
+tire_slots_angles = [[0, 45], [45, 0]];
 
 // 0 - tire slot is aligned to one side of the wheel, 50 - in the middle, 100 - to another side
 // -1 - means that tire_slot_align_mm is used
@@ -126,7 +126,14 @@ tire_slots_align_mm = [0, 0];
 tire_thicknes = 3;
 
 // tire inner diameter will be decreased by this amount of mm to titgh it on the wheel
-tire_stretching = 0.2; 
+tire_stretching = 0.2;
+
+// width of tire bevel along z axis.
+// array of two elements: first is bottom bevel, second is top bevel along z axis
+tire_bevel_width = [1, 1];
+
+// angle of tire bevel. 0 - is no bevel
+tire_bevel_angle = [45, 45];
 
 /* [Global] */
 
@@ -182,13 +189,13 @@ rim_external_align = (rim_external_align_percent < 0)
 
 // ----- Wheel Modules -----
 module wheel() {
-    if (render_part == "a" || render_part == "c") {
+    if (render_part == "w" || render_part == "a") {
         hub();
         spokes();
         if (add_disc) color("BurlyWood") disc();
         rim();
     }
-    if (render_part == "b" || render_part == "c") {
+    if (render_part == "t" || render_part == "a") {
         color("DarkGrey") tire();
     }
 }
@@ -196,7 +203,7 @@ module wheel() {
 // ----- Tire Modules -----
 module tire() {
     rotate_extrude(convexity = 6)
-        !tire_profile();
+        tire_profile();
 }
 
 module tire_profile() {
@@ -207,6 +214,22 @@ module tire_profile() {
 }    
 
 module tire_profile_itself() {
+    difference() {
+        bare_tire_profile();
+        tire_bevels_profile();
+    }
+}
+
+module tire_bevels_profile() {
+    translate([wheel_radius, wheel_width / 2 - tire_bevel_width[0]])
+        rotate([0, 0, tire_bevel_angle[0]])
+            square(tire_bevel_width[0] * 2);
+    translate([wheel_radius, -wheel_width / 2 + tire_bevel_width[1]])
+        rotate([0, 0, -90 - tire_bevel_angle[1]])
+            square(tire_bevel_width[1] * 2);
+}
+
+module bare_tire_profile() {
     max_slot_depth = max(tire_slots_depth);
     translate([rim_external_radius - max_slot_depth - tire_stretching / 2, -wheel_width / 2])
         square([tire_thicknes + max_slot_depth + tire_stretching / 2, wheel_width]);
