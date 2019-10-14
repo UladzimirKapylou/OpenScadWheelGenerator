@@ -5,11 +5,11 @@ $fn = 100;
 render_part = "a"; // [w:Wheel, t:Tire, a:Wheel And Tire Joined]
 
 // diameter of the whole wheel with tire
-wheel_diameter = 40;
+wheel_diameter = 50;
 wheel_width = 8;
 
 // just for general understanding and debugging of wheel/tire profiles in fast render view
-debug_tire_profile = false;
+debug_tire_profile = true;
 
 // slice the whole wheel vertically
 slice_wheel = false;
@@ -20,11 +20,6 @@ slice_wheel = false;
 slice_wheel_percent = 50;
 // the same, but in mm
 slice_wheel_mm = 0;
-
-// rim обод
-// hub ступица
-// shaft ось
-// spoke спица
 
 /* [Hub] */
 hub_diameter = 8;
@@ -163,7 +158,7 @@ no_protector_width_between_loops = 0.5;
 
 protector_elements_in_loop = [20, -1];
 
-protector_depth = [.5, -1];
+protector_depth = [.5, .8];
 
 protector_tip_width_percent = [50, 70];
 
@@ -440,7 +435,7 @@ module spokes() {
                 for(angle = [0: 360 / spoke_count : 360 - aBit]) {
                      color("pink") rotate([0, 0, angle]) spoke();
                 }
-                rim_internal(thicknes = spoke_full_length, height = wheel_width * 5);
+                rim_internal(thicknes = spoke_full_length, height = wheel_width * 5, angle = 360);
             }
         }
         hub_cylinder(height = (wheel_width + spoke_height) * 3, align = 0, angle = 360);
@@ -507,8 +502,8 @@ module bare_rim_external_profile() {
         square([rim_external_thicknes, rim_external_height]);
 }
 
-module rim_internal(thicknes = rim_internal_thicknes, height = rim_internal_height) {
-    rotate_extrude(angle = rotate_angle, convexity = 6) {
+module rim_internal(thicknes = rim_internal_thicknes, height = rim_internal_height, angle = rotate_angle) {
+    rotate_extrude(angle = angle, convexity = 6) {
         rim_internal_profile(thicknes = thicknes, height = height);
     }
 }
