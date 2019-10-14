@@ -9,7 +9,7 @@ wheel_diameter = 40;
 wheel_width = 8;
 
 // just for general understanding and debugging of wheel/tire profiles in fast render view
-debug_tire_profile = true;
+debug_tire_profile = false;
 
 // slice the whole wheel vertically
 slice_wheel = false;
@@ -151,18 +151,17 @@ tire_bevel_angle = [45, 45];
 /* [Protector] */
 add_protector = true;
 
-protector_loops = 2;
+protector_loops = 3;
 
-protector_loops_phase = [0, 50];
+protector_loops_phase = [0, 30, -1];
 
-no_protector_width_between_loops = 5;
+no_protector_width_between_loops = 0.5;
 
 protector_elements_in_loop = [10, -1];
 
-protector_depth = 1.5;
+protector_depth = [1.5, -1];
 
-protector_tip_width_percent = 50;
-protector_tip_width_mm = 0;
+protector_tip_width_percent = [50];
 
 /* [Global] */
 /*[Hidden]*/
@@ -254,34 +253,50 @@ module wheel() {
 module protector() {
     for (protector_loop = [0: protector_loops - 1]) {
         height_align = (protector_height + no_protector_width_between_loops) * protector_loop + protector_height / 2 - wheel_width / 2 - aBit / 2;
-        phase_percent = protector_loops_phase[protector_loop];
-        element_count = protector_elements_in_loop[protector_loop] < 0 ?
-                            protector_elements_in_loop[0] : protector_elements_in_loop[protector_loop];
+        phase_percent = len(protector_loops_phase) < protector_loop + 1
+                            ? protector_loops_phase[0]
+                            : protector_loops_phase[protector_loop];
+        element_count = protector_elements_in_loop[protector_loop] < 0
+                            || len(protector_elements_in_loop) < protector_loop + 1
+                            ? protector_elements_in_loop[0]
+                            : protector_elements_in_loop[protector_loop];
+        depth = protector_depth[protector_loop] < 0
+                            || len(protector_depth) < protector_loop + 1
+                            ? protector_depth[0]
+                            : protector_depth[protector_loop];
+        tip_width_percent = protector_tip_width_percent[protector_loop]
+                            || len(protector_tip_width_percent) < protector_loop + 1
+                            ? protector_tip_width_percent[0]
+                            : protector_tip_width_percent[protector_loop];
         
-        protector_loop(height_align = height_align, phase_percent = phase_percent, element_count = element_count);
+        protector_loop(height_align = height_align,
+                        phase_percent = phase_percent,
+                        element_count = element_count,
+                        depth = depth,
+                        tip_width_percent = tip_width_percent);
     }
 }
 
-module protector_loop(height_align, phase_percent, element_count) {
+module protector_loop(height_align, phase_percent, element_count, depth, tip_width_percent) {
     protector_element_period = 360 / element_count;
-    protector_bottom_angle = protector_element_period / 100 * (100 - protector_tip_width_percent);
+    protector_bottom_angle = protector_element_period / 100 * (100 - tip_width_percent);
     phase = protector_element_period / 100 * phase_percent;
 
     rotate([0, 0, phase - aBit])
         translate([0, 0, height_align])
             for(angle = [0: 360 / element_count : 360 - aBit]) {
-                rotate([0, 0, angle]) protector_element(angle = protector_bottom_angle);
+                rotate([0, 0, angle]) protector_element(angle = protector_bottom_angle, depth = depth);
             }
 }
 
-module protector_element(angle) {
+module protector_element(angle, depth) {
     rotate_extrude(angle = angle)
-            protector_notch_profile();
+            protector_notch_profile(depth);
 }
 
-module protector_notch_profile() {
-    translate([wheel_radius - protector_depth, -protector_height / 2, 0])
-        square([protector_depth * 2, protector_height]);
+module protector_notch_profile(depth) {
+    translate([wheel_radius - depth, -protector_height / 2, 0])
+        square([depth * 2, protector_height]);
 }
 
 // ----- Tire Modules -----
