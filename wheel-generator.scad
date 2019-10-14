@@ -153,7 +153,11 @@ add_protector = true;
 
 protector_loops = 3;
 
-protector_loops_phase = [0, 50, -1];
+protector_loops_phase_percent = [0, 60, -1];
+
+protector_loops_height = [-1, 4, -1];
+
+protector_loops_align_percent = [0, 0, 0];
 
 no_protector_width_between_loops = 0.5;
 
@@ -161,7 +165,7 @@ protector_elements_in_loop = [20, -1];
 
 protector_depth = [.5, -1];
 
-protector_tip_width_percent = [50];
+protector_tip_width_percent = [50, 70];
 
 /* [Global] */
 /*[Hidden]*/
@@ -225,7 +229,7 @@ slice_wheel_align = debug_tire_profile ?
                 ? slice_wheel_mm
                 : wheel_diameter * (100 - slice_wheel_percent) / 100;
 
-protector_height  = (wheel_width - no_protector_width_between_loops * (protector_loops -1)) / protector_loops + aBit;
+protector_default_height  = (wheel_width - no_protector_width_between_loops * (protector_loops -1)) / protector_loops + aBit;
 
 rotate_angle = $preview && debug_tire_profile ? 180 : 360;
 
@@ -259,10 +263,9 @@ module wheel() {
 // ----- Protector Modules -----
 module protector() {
     for (protector_loop = [0: protector_loops - 1]) {
-        height_align = (protector_height + no_protector_width_between_loops) * protector_loop + protector_height / 2 - wheel_width / 2 - aBit / 2;
-        phase_percent = len(protector_loops_phase) < protector_loop + 1
-                            ? protector_loops_phase[0]
-                            : protector_loops_phase[protector_loop];
+        phase_percent = len(protector_loops_phase_percent) < protector_loop + 1
+                            ? protector_loops_phase_percent[0]
+                            : protector_loops_phase_percent[protector_loop];
         element_count = protector_elements_in_loop[protector_loop] < 0
                             || len(protector_elements_in_loop) < protector_loop + 1
                             ? protector_elements_in_loop[0]
@@ -271,20 +274,33 @@ module protector() {
                             || len(protector_depth) < protector_loop + 1
                             ? protector_depth[0]
                             : protector_depth[protector_loop];
-        tip_width_percent = protector_tip_width_percent[protector_loop]
+        tip_width_percent = protector_tip_width_percent[protector_loop] < 0
                             || len(protector_tip_width_percent) < protector_loop + 1
                             ? protector_tip_width_percent[0]
                             : protector_tip_width_percent[protector_loop];
+        loop_height =  protector_loops_height[protector_loop] < 0
+                            || len(protector_loops_height) < protector_loop + 1
+                            ? protector_default_height
+                            : protector_loops_height[protector_loop];
+        loop_align_percent = len(protector_loops_align_percent) < protector_loop + 1
+                            ? 0
+                            : protector_loops_align_percent[protector_loop];
+        height_align = ((protector_default_height + no_protector_width_between_loops) * protector_loop
+                                + protector_default_height / 2 - wheel_width / 2 - aBit / 2)
+                            + (protector_default_height + no_protector_width_between_loops) / 100 * loop_align_percent
+                            + (protector_default_height - loop_height) / 2;
+
         
         protector_loop(height_align = height_align,
                         phase_percent = phase_percent,
                         element_count = element_count,
                         depth = depth,
-                        tip_width_percent = tip_width_percent);
+                        tip_width_percent = tip_width_percent,
+                        height = loop_height);
     }
 }
 
-module protector_loop(height_align, phase_percent, element_count, depth, tip_width_percent) {
+module protector_loop(height_align, phase_percent, element_count, depth, tip_width_percent, height) {
     protector_element_period = 360 / element_count;
     protector_bottom_angle = protector_element_period / 100 * (100 - tip_width_percent);
     phase = protector_element_period / 100 * phase_percent;
@@ -292,18 +308,18 @@ module protector_loop(height_align, phase_percent, element_count, depth, tip_wid
     rotate([0, 0, phase - aBit])
         translate([0, 0, height_align])
             for(angle = [0: 360 / element_count : 360 - aBit]) {
-                rotate([0, 0, angle]) protector_element(angle = protector_bottom_angle, depth = depth);
+                rotate([0, 0, angle]) protector_element(angle = protector_bottom_angle, depth = depth, height = height);
             }
 }
 
-module protector_element(angle, depth) {
+module protector_element(angle, depth, height) {
     rotate_extrude(angle = angle)
-            protector_notch_profile(depth);
+            protector_notch_profile(depth, height);
 }
 
-module protector_notch_profile(depth) {
-    translate([wheel_radius - depth, -protector_height / 2, 0])
-        square([depth * 2, protector_height]);
+module protector_notch_profile(depth, height) {
+    translate([wheel_radius - depth, -protector_default_height / 2, 0])
+        square([depth * 2, height]);
 }
 
 // ----- Tire Modules -----
