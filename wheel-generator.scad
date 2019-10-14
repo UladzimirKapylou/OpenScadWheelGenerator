@@ -9,7 +9,7 @@ wheel_diameter = 40;
 wheel_width = 8;
 
 // just for general understanding and debugging of wheel/tire profiles in fast render view
-debug_tire_profile = false;
+debug_tire_profile = true;
 
 // slice the whole wheel vertically
 slice_wheel = false;
@@ -36,7 +36,7 @@ hub_hole_diameter = 3;
 hub_hole_flat_diameter = 2.5;
 hub_hole_flat_angle = 0;
 
-hub_hole_add_cap = false;
+hub_hole_add_cap = true;
 hub_hole_cap_position = "t"; // [t:Top, b:Bottom]
 hub_hole_cap_hight = 1; 
 
@@ -148,10 +148,26 @@ tire_bevel_width = [1, 1];
 // angle of tire bevel. 0 - is no bevel
 tire_bevel_angle = [45, 45];
 
+/* [Protector] */
+add_protector = true;
+
+protector_loops = 2;
+
+protector_loops_phase = [0, 50];
+
+no_protector_width_between_loops = 5;
+
+protector_elements_in_loop = [10, -1];
+
+protector_depth = 1.5;
+
+protector_tip_width_percent = 50;
+protector_tip_width_mm = 0;
+
 /* [Global] */
 /*[Hidden]*/
 // a small value to increment/decrement values when needed to improve fast render view
-aBit = 0.001; 
+aBit = $preview ? 0.001 : 0; 
 
 // ----- Calc additional values -----
 hub_height = (hub_height_mm == -1) ? wheel_width * 0.75 : hub_height_mm;
@@ -197,9 +213,13 @@ rim_external_align = (rim_external_align_percent < 0)
             ? rim_external_align_mm
             : (wheel_width - rim_external_height) * rim_external_align_percent / 100;
 
-slice_wheel_align = (slice_wheel_percent < 0)
-            ? slice_wheel_mm
-            : wheel_diameter * (100 - slice_wheel_percent) / 100;
+slice_wheel_align = debug_tire_profile ?
+            wheel_diameter / 2
+            : (slice_wheel_percent < 0)
+                ? slice_wheel_mm
+                : wheel_diameter * (100 - slice_wheel_percent) / 100;
+
+protector_height  = (wheel_width - no_protector_width_between_loops * (protector_loops -1)) / protector_loops + aBit;
 
 rotate_angle = $preview && debug_tire_profile ? 180 : 360;
 
@@ -214,7 +234,7 @@ module wheel_generator() {
 
 module slice() {
     translate([0, -slice_wheel_align - aBit, 0])
-        cube([wheel_diameter + aBit, wheel_diameter, wheel_width + aBit], center = true);
+        cube([wheel_diameter * 2, wheel_diameter, wheel_width * 2], center = true);
 }
 
 // ----- Wheel Modules -----
@@ -230,10 +250,47 @@ module wheel() {
     }
 }
 
+// ----- Protector Modules -----
+module protector() {
+    for (protector_loop = [0: protector_loops - 1]) {
+        height_align = (protector_height + no_protector_width_between_loops) * protector_loop + protector_height / 2 - wheel_width / 2 - aBit / 2;
+        phase_percent = protector_loops_phase[protector_loop];
+        element_count = protector_elements_in_loop[protector_loop] < 0 ?
+                            protector_elements_in_loop[0] : protector_elements_in_loop[protector_loop];
+        
+        protector_loop(height_align = height_align, phase_percent = phase_percent, element_count = element_count);
+    }
+}
+
+module protector_loop(height_align, phase_percent, element_count) {
+    protector_element_period = 360 / element_count;
+    protector_bottom_angle = protector_element_period / 100 * (100 - protector_tip_width_percent);
+    phase = protector_element_period / 100 * phase_percent;
+
+    rotate([0, 0, phase - aBit])
+        translate([0, 0, height_align])
+            for(angle = [0: 360 / element_count : 360 - aBit]) {
+                rotate([0, 0, angle]) protector_element(angle = protector_bottom_angle);
+            }
+}
+
+module protector_element(angle) {
+    rotate_extrude(angle = angle)
+            protector_notch_profile();
+}
+
+module protector_notch_profile() {
+    translate([wheel_radius - protector_depth, -protector_height / 2, 0])
+        square([protector_depth * 2, protector_height]);
+}
+
 // ----- Tire Modules -----
 module tire() {
-    rotate_extrude(angle = rotate_angle, convexity = 6)
-        tire_profile();
+    difference() {
+        rotate_extrude(angle = rotate_angle, convexity = 6)
+            tire_profile();
+        if (add_protector) protector();
+    }
 }
 
 module tire_profile() {
@@ -302,7 +359,7 @@ module hub() {
     }
 }
 
-function calc_hub_align() = -(wheel_width - hub_height) / 2 + hub_align;
+function calc_hub_align() = -(wheel_width - hub_height) / 2 + hub_align - aBit;
 
 module hub_hole_flat() {
     difference() {
